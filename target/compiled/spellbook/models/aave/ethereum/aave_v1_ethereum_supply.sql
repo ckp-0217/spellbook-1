@@ -1,0 +1,78 @@
+
+
+
+
+
+SELECT 
+      version,
+      transaction_type,
+      erc20.symbol,
+      deposit.token as token_address, 
+      depositor,
+      withdrawn_to,
+      liquidator,
+      amount / CAST(CONCAT('1e',CAST(erc20.decimals AS VARCHAR(100))) AS DOUBLE) AS amount,
+      (amount / CAST(CONCAT('1e',CAST(p.decimals AS VARCHAR(100))) AS DOUBLE)) * price AS usd_amount,
+      evt_tx_hash,
+      evt_index,
+      evt_block_time,
+      evt_block_number 
+FROM (
+ SELECT 
+    '1' AS version,
+    'deposit' AS transaction_type,
+    CASE
+        WHEN _reserve = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' --Using WETH instead of Aave "mock" address
+        ELSE _reserve
+    END AS token,
+    _user AS depositor, 
+    CAST(NULL AS VARCHAR(5)) AS withdrawn_to,
+    CAST(NULL AS VARCHAR(5)) AS liquidator,
+    CAST(_amount AS DECIMAL(38,0)) AS amount,
+    evt_tx_hash,
+    evt_index,
+    evt_block_time,
+    evt_block_number
+FROM `aave_ethereum`.`LendingPool_evt_Deposit`
+UNION ALL 
+SELECT 
+    '1' AS version,
+    'withdraw' AS transaction_type,
+    CASE
+        WHEN _reserve = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' --Using WETH instead of Aave "mock" address
+        ELSE _reserve
+    END AS token,
+    _user AS depositor,
+    _user AS withdrawn_to,
+    CAST(NULL AS VARCHAR(5)) AS liquidator,
+    - CAST(_amount AS DECIMAL(38,0)) AS amount,
+    evt_tx_hash,
+    evt_index,
+    evt_block_time,
+    evt_block_number
+FROM `aave_ethereum`.`LendingPool_evt_RedeemUnderlying`
+UNION ALL 
+SELECT 
+    '1' AS version,
+    'deposit_liquidation' AS transaction_type,
+    CASE
+        WHEN _collateral = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' --Using WETH instead of Aave "mock" address
+        ELSE _collateral
+    END AS token,
+    _user AS depositor,
+    _liquidator AS withdrawn_to,
+    _liquidator AS liquidator,
+    - CAST(_liquidatedCollateralAmount AS DECIMAL(38,0)) AS amount,
+    evt_tx_hash,
+    evt_index,
+    evt_block_time,
+    evt_block_number
+FROM `aave_ethereum`.`LendingPool_evt_LiquidationCall`
+) deposit
+LEFT JOIN `tokens_ethereum`.`erc20` erc20
+    ON deposit.token = erc20.contract_address
+LEFT JOIN `prices`.`usd` p 
+    ON p.minute = date_trunc('minute', deposit.evt_block_time) 
+    AND p.contract_address = deposit.token 
+    AND p.blockchain = 'ethereum'
+;

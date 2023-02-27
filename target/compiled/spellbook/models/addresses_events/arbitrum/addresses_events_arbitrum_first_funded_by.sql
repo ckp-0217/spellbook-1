@@ -1,0 +1,16 @@
+
+
+SELECT 'arbitrum' AS blockchain
+, et.to AS address
+, MIN_BY(et.from, et.block_number) AS first_funded_by
+, MIN(et.block_time) AS block_time
+, MIN(et.block_number) AS block_number
+, MIN_BY(et.tx_hash, et.block_number) AS tx_hash
+FROM `arbitrum`.`traces` et
+
+WHERE et.success
+AND (et.call_type NOT IN ('delegatecall', 'callcode', 'staticcall') OR et.call_type IS NULL)
+AND CAST(et.value AS double) > 0
+
+GROUP BY et.to
+;

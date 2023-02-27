@@ -79,8 +79,7 @@ instance/
 # Sphinx documentation
 docs/_build/
 
-# PyBuilder
-target/
+
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -137,7 +136,6 @@ dmypy.json
 .pyre/
 
 .idea/*
-target/
 dbt_packages/
 logs/
 

@@ -1,0 +1,13 @@
+
+
+SELECT DISTINCT 'ethereum' AS blockchain
+, account_address AS address
+, 'Flashbots User' AS name
+, 'infrastructure' AS category
+, 'hildobby' AS contributor
+, 'query' AS source
+, date('2022-10-08') AS created_at
+, NOW() AS modified_at
+, 'flashbots' AS model_name
+, 'persona' as label_type
+FROM `flashbots`.`arbitrages`
